@@ -92,23 +92,46 @@ button:active {
       <input type="file" id="photoInput" accept="image/*" hidden>
     </div>
 
-    <label>Name</label>
-    <input id="name">
 
-    <label>Klasse</label>
-    <input id="class">
+    <label>1. Name und Alter?</label>
+    <textarea id="q1" maxlength="50" rows="2"></textarea>
+    <div class="error-message" id="error-q1" style="color:#c00;font-size:0.9em;display:none;"></div>
 
-    <label>Lieblingsfächer</label>
-    <input id="subjects">
+    <label>2. Welche Ausbildung und welcher Betrieb?</label>
+    <textarea id="q2" maxlength="200" rows="2"></textarea>
+    <div class="error-message" id="error-q2" style="color:#c00;font-size:0.9em;display:none;"></div>
 
-    <label>Hobbys</label>
-    <input id="hobbies">
+    <label>3. Warum dieser Beruf?</label>
+    <textarea id="q3" maxlength="500" rows="2"></textarea>
+    <div class="error-message" id="error-q3" style="color:#c00;font-size:0.9em;display:none;"></div>
 
-    <label>Berufswunsch</label>
-    <input id="job">
+    <label>4. Was macht dir an der Ausbildung Spaß?</label>
+    <textarea id="q4" maxlength="500" rows="2"></textarea>
+    <div class="error-message" id="error-q4" style="color:#c00;font-size:0.9em;display:none;"></div>
 
-    <label>Über mich</label>
-    <textarea rows="3" id="about"></textarea>
+    <label>5. Lieblingsfach in der Berufsschule?</label>
+    <textarea id="q5" maxlength="200" rows="2"></textarea>
+    <div class="error-message" id="error-q5" style="color:#c00;font-size:0.9em;display:none;"></div>
+
+    <label>6. Ziele nach der Ausbildung?</label>
+    <textarea id="q6" maxlength="500" rows="2"></textarea>
+    <div class="error-message" id="error-q6" style="color:#c00;font-size:0.9em;display:none;"></div>
+
+    <label>7. Lieblingsbeschäftigung in der Freizeit?</label>
+    <textarea id="q7" maxlength="500" rows="2"></textarea>
+    <div class="error-message" id="error-q7" style="color:#c00;font-size:0.9em;display:none;"></div>
+
+    <label>8. Lieblingsmusik / Serie / Game?</label>
+    <textarea id="q8" maxlength="200" rows="2"></textarea>
+    <div class="error-message" id="error-q8" style="color:#c00;font-size:0.9em;display:none;"></div>
+
+    <label>9. Gibt es einen Fun Fact oder etwas Besonderes, das viele nicht über dich wissen?</label>
+    <textarea id="q9" maxlength="500" rows="2"></textarea>
+    <div class="error-message" id="error-q9" style="color:#c00;font-size:0.9em;display:none;"></div>
+
+    <label>10. Ein Wunsch für die Zukunft?</label>
+    <textarea id="q10" maxlength="500" rows="2"></textarea>
+    <div class="error-message" id="error-q10" style="color:#c00;font-size:0.9em;display:none;"></div>
 
     <button id="downloadBtn">📄 Steckbrief als PDF herunterladen</button>
 
@@ -129,34 +152,55 @@ let photoData = null;
 let photoWidth = 0;
 let photoHeight = 0;
 
+// === Error Message for Textareas ===
+const textareaIds = [
+  "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10"
+];
+textareaIds.forEach(id => {
+  const textarea = document.getElementById(id);
+  const errorDiv = document.getElementById("error-" + id);
+  if (textarea && errorDiv) {
+    // Enforce max length and show error
+    const showError = () => {
+      const maxChar = parseInt(textarea.getAttribute("maxlength"), 10);
+      if (textarea.value.length > maxChar) {
+        textarea.value = textarea.value.slice(0, maxChar);
+        errorDiv.textContent = `Maximal ${maxChar} Zeichen erlaubt.`;
+        errorDiv.style.display = "block";
+      } else {
+        errorDiv.textContent = "";
+        errorDiv.style.display = "none";
+      }
+    };
+    textarea.addEventListener("input", showError);
+    textarea.addEventListener("paste", function(e) {
+      setTimeout(showError, 0);
+    });
+    textarea.addEventListener("change", showError);
+  }
+});
 
 // === Photo Upload and Processing ===
-
-// Handle both click and touch events for photo upload
 photoArea.addEventListener("click", () => {
   photoInput.click();
 });
-
 photoArea.addEventListener("touchend", (e) => {
   e.preventDefault();
   e.stopPropagation();
   photoInput.click();
 });
-
 photoInput.addEventListener("change", e => {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = () => {
-    // Resize only if image is extremely large (to prevent crashes)
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const MAX_WIDTH = 2400;  // High quality limit
+      const MAX_WIDTH = 2400;
       const MAX_HEIGHT = 1800;
       let width = img.width;
       let height = img.height;
-
       if (width > height) {
         if (width > MAX_WIDTH) {
           height *= MAX_WIDTH / width;
@@ -168,17 +212,13 @@ photoInput.addEventListener("change", e => {
           height = MAX_HEIGHT;
         }
       }
-
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
-      
-      // Store dimensions for PDF
       photoWidth = width;
       photoHeight = height;
-      
-      photoData = canvas.toDataURL('image/jpeg', 0.95);  // High quality (95%)
+      photoData = canvas.toDataURL('image/jpeg', 0.95);
       photoArea.innerHTML = `<img src="${photoData}">`;
     };
     img.src = reader.result;
@@ -186,64 +226,154 @@ photoInput.addEventListener("change", e => {
   reader.readAsDataURL(file);
 });
 
-
 // === PDF Generation and Download ===
-
 async function downloadPDF() {
   try {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF();
-
-    let y = 20;
-
-    pdf.setFontSize(18);
-    pdf.text("Mein Steckbrief", 105, y, { align: "center" });
-    y += 10;
-
+    // --- Always fit on one page, photo min size ---
+    const minPhotoSize = 60; // px
+    const maxPhotoSize = 80; // px
+    const pageWidth = 210, pageHeight = 297;
+    const cardMargin = 15;
+    const cardWidth = pageWidth - 2 * cardMargin;
+    const cardHeight = pageHeight - 2 * cardMargin;
+    let scale = 1.0;
+    let photoSize = maxPhotoSize;
+    // Estimate height for scale and photoSize
+    function estimateContentHeight(scale, photoSize) {
+      let height = 6 * scale + 12 * scale;
+      if (photoData) {
+        const aspectRatio = photoWidth / photoHeight;
+        const pdfPhotoHeight = aspectRatio > 1 ? photoSize / aspectRatio : photoSize;
+        height += pdfPhotoHeight + 10 * scale;
+      }
+      const fields = [
+        { label: "1. Name und Alter?", value: document.getElementById("q1").value },
+        { label: "2. Welche Ausbildung und welcher Betrieb?", value: document.getElementById("q2").value },
+        { label: "3. Warum dieser Beruf?", value: document.getElementById("q3").value },
+        { label: "4. Was macht dir an der Ausbildung Spaß?", value: document.getElementById("q4").value },
+        { label: "5. Lieblingsfach in der Berufsschule?", value: document.getElementById("q5").value },
+        { label: "6. Ziele nach der Ausbildung?", value: document.getElementById("q6").value },
+        { label: "7. Lieblingsbeschäftigung in der Freizeit?", value: document.getElementById("q7").value },
+        { label: "8. Lieblingsmusik / Serie / Game?", value: document.getElementById("q8").value },
+        { label: "9. Gibt es einen Fun Fact oder etwas Besonderes, das viele nicht über dich wissen?", value: document.getElementById("q9").value },
+        { label: "10. Ein Wunsch für die Zukunft?", value: document.getElementById("q10").value }
+      ];
+      pdf.setFontSize(12 * scale);
+      fields.forEach(f => {
+        const wrappedLabel = pdf.splitTextToSize(f.label, 155);
+        height += wrappedLabel.length * 6 * scale;
+        pdf.setFontSize(11 * scale);
+        const wrappedText = pdf.splitTextToSize(f.value || "", 155);
+        height += Math.max(8 * scale, wrappedText.length * 5 * scale + 3 * scale) + 8 * scale;
+      });
+      return height;
+    }
+    // Try to fit everything on one page, never shrink photo below minPhotoSize
+    let estimatedHeight = estimateContentHeight(scale, maxPhotoSize);
+    if (estimatedHeight > cardHeight) {
+      // Try reducing scale, but keep photo at minPhotoSize
+      let bestScale = scale;
+      let bestPhotoSize = maxPhotoSize;
+      for (let s = 1.0; s >= 0.4; s -= 0.02) {
+        let h = estimateContentHeight(s, maxPhotoSize);
+        if (h <= cardHeight) {
+          bestScale = s;
+          bestPhotoSize = maxPhotoSize;
+          break;
+        }
+        // Try reducing photo size, but not below minPhotoSize
+        for (let p = maxPhotoSize; p >= minPhotoSize; p -= 2) {
+          let h2 = estimateContentHeight(s, p);
+          if (h2 <= cardHeight) {
+            bestScale = s;
+            bestPhotoSize = p;
+            break;
+          }
+        }
+      }
+      scale = bestScale;
+      photoSize = bestPhotoSize;
+      estimatedHeight = estimateContentHeight(scale, photoSize);
+    } else if (estimatedHeight < cardHeight * 0.75) {
+      scale = Math.min(1.2, cardHeight * 0.85 / estimatedHeight);
+      photoSize = maxPhotoSize;
+      estimatedHeight = estimateContentHeight(scale, photoSize);
+    }
+    // Draw card and content, always one page
+    let fields = [
+      { label: "1. Name und Alter?", value: document.getElementById("q1").value },
+      { label: "2. Welche Ausbildung und welcher Betrieb?", value: document.getElementById("q2").value },
+      { label: "3. Warum dieser Beruf?", value: document.getElementById("q3").value },
+      { label: "4. Was macht dir an der Ausbildung Spaß?", value: document.getElementById("q4").value },
+      { label: "5. Lieblingsfach in der Berufsschule?", value: document.getElementById("q5").value },
+      { label: "6. Ziele nach der Ausbildung?", value: document.getElementById("q6").value },
+      { label: "7. Lieblingsbeschäftigung in der Freizeit?", value: document.getElementById("q7").value },
+      { label: "8. Lieblingsmusik / Serie / Game?", value: document.getElementById("q8").value },
+      { label: "9. Gibt es einen Fun Fact oder etwas Besonderes, das viele nicht über dich wissen?", value: document.getElementById("q9").value },
+      { label: "10. Ein Wunsch für die Zukunft?", value: document.getElementById("q10").value }
+    ];
+    pdf.setFillColor(242, 244, 247);
+    pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+    pdf.setFillColor(255, 255, 255);
+    pdf.roundedRect(cardMargin, cardMargin, cardWidth, cardHeight, 3, 3, 'F');
+    pdf.setDrawColor(0, 0, 0);
+    pdf.setGState(new pdf.GState({ opacity: 0.1 }));
+    pdf.roundedRect(cardMargin, cardMargin, cardWidth, cardHeight, 3, 3, 'S');
+    pdf.setGState(new pdf.GState({ opacity: 1 }));
+    let y = cardMargin + 6 * scale;
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFontSize(18 * scale);
+    pdf.setFont(undefined, 'bold');
+    pdf.text("Mein Steckbrief", pageWidth / 2, y + 6 * scale, { align: "center" });
+    y += 12 * scale;
     if (photoData) {
-      // Maintain aspect ratio in PDF
-      const maxWidth = 90;
-      const maxHeight = 90;
       const aspectRatio = photoWidth / photoHeight;
-      
       let pdfWidth, pdfHeight;
       if (aspectRatio > 1) {
-        // Landscape
-        pdfWidth = maxWidth;
-        pdfHeight = maxWidth / aspectRatio;
+        pdfWidth = photoSize;
+        pdfHeight = photoSize / aspectRatio;
       } else {
-        // Portrait or square
-        pdfHeight = maxHeight;
-        pdfWidth = maxHeight * aspectRatio;
+        pdfHeight = photoSize;
+        pdfWidth = photoSize * aspectRatio;
       }
-      
-      // Center the image horizontally
-      const xPos = (210 - pdfWidth) / 2; // A4 width is 210mm
-      
+      const xPos = (pageWidth - pdfWidth) / 2;
+      pdf.setDrawColor(170, 170, 170);
+      pdf.setLineWidth(0.5 * scale);
+      pdf.roundedRect(xPos - 2, y - 2, pdfWidth + 4, pdfHeight + 4, 3 * scale, 3 * scale, 'S');
       pdf.addImage(photoData, "JPEG", xPos, y, pdfWidth, pdfHeight);
-      y += pdfHeight + 10;
+      y += pdfHeight + 12 * scale;
     }
-
-    pdf.setFontSize(12);
-    pdf.text(`Name: ${document.getElementById("name").value}`, 20, y); y += 8;
-    pdf.text(`Klasse: ${document.getElementById("class").value}`, 20, y); y += 8;
-    pdf.text(`Lieblingsfächer: ${document.getElementById("subjects").value}`, 20, y); y += 8;
-    pdf.text(`Hobbys: ${document.getElementById("hobbies").value}`, 20, y); y += 8;
-    pdf.text(`Berufswunsch: ${document.getElementById("job").value}`, 20, y); y += 8;
-
-    const about = document.getElementById("about").value || "";
-    const lines = pdf.splitTextToSize("Über mich: " + about, 170);
-    pdf.text(lines, 20, y);
-
-    // Mobile-friendly download
+    pdf.setFont(undefined, 'bold');
+    pdf.setFontSize(12 * scale);
+    for (let idx = 0; idx < fields.length; idx++) {
+      const f = fields[idx];
+      const wrappedLabel = pdf.splitTextToSize(f.label, 155);
+      pdf.setFont(undefined, 'bold');
+      pdf.setFontSize(12 * scale);
+      pdf.text(wrappedLabel, cardMargin + 10, y);
+      const labelHeight = wrappedLabel.length * 6 * scale;
+      // Reduce whitespace between heading and box
+      const boxTop = y + labelHeight + 0.5 * scale;
+      pdf.setFont(undefined, 'normal');
+      pdf.setFontSize(11 * scale);
+      const wrappedText = pdf.splitTextToSize(f.value || "", 155);
+      let boxHeight = Math.max(8 * scale, wrappedText.length * 5 * scale + 3 * scale);
+      if (estimatedHeight > cardHeight) {
+        boxHeight = Math.max(8 * scale, wrappedText.length * 4 * scale + 2 * scale);
+      }
+      pdf.setDrawColor(204, 204, 204);
+      pdf.setLineWidth(0.3);
+      pdf.roundedRect(cardMargin + 10, boxTop, cardWidth - 20, boxHeight, 2 * scale, 2 * scale, 'S');
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(wrappedText, cardMargin + 12, boxTop + 5.5 * scale);
+      y += labelHeight + boxHeight + 8 * scale;
+    }
     const pdfBlob = pdf.output('blob');
     const url = URL.createObjectURL(pdfBlob);
-    
-    // More comprehensive mobile detection
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
                      (window.innerWidth <= 768 && 'ontouchstart' in window);
-    
-    // For iOS and Android compatibility
     if (isMobile) {
       const link = document.createElement('a');
       link.href = url;
@@ -252,7 +382,6 @@ async function downloadPDF() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
       setTimeout(() => URL.revokeObjectURL(url), 100);
     } else {
       pdf.save("mein_steckbrief.pdf");
@@ -262,12 +391,9 @@ async function downloadPDF() {
     alert('Fehler beim Erstellen der PDF: ' + error.message);
   }
 }
-
-// Handle both click and touch events for download button
 downloadBtn.addEventListener("click", () => {
   downloadPDF();
 });
-
 downloadBtn.addEventListener("touchend", (e) => {
   e.preventDefault();
   e.stopPropagation();
