@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mein digitaler Steckbrief (PDF)</title>
+
+<!-- Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f2f4f7;
+  margin: 0;
+  padding: 10px;
+}
+.container {
+  max-width: 420px;
+  margin: auto;
+}
+.card {
+  background: white;
+  padding: 15px;
+  border-radius: 16px;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+}
+h1 { text-align: center; }
+.photo {
+  border: 2px dashed #aaa;
+  border-radius: 12px;
+  text-align: center;
+  padding: 15px;
+  cursor: pointer;
+  margin-bottom: 15px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0,0,0,0.1);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.photo img {
+  width: 100%;
+  border-radius: 12px;
+}
+label {
+  font-weight: bold;
+  margin-top: 10px;
+  display: block;
+}
+input, textarea {
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+  font-size: 16px;
+}
+button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 12px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  background: #0077cc;
+  color: white;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(0,0,0,0.1);
+  box-sizing: border-box;
+}
+button:active {
+  background: #005fa3;
+}
+.hint {
+  font-size: 0.85em;
+  color: #555;
+  margin-top: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <div class="card" id="steckbrief">
+    <h1>Mein Steckbrief</h1>
+
+    <div class="photo" id="photoArea">
+      📷 Foto antippen
+      <input type="file" id="photoInput" accept="image/*" hidden>
+    </div>
+
+    <label>Name</label>
+    <input id="name">
+
+    <label>Klasse</label>
+    <input id="class">
+
+    <label>Lieblingsfächer</label>
+    <input id="subjects">
+
+    <label>Hobbys</label>
+    <input id="hobbies">
+
+    <label>Berufswunsch</label>
+    <input id="job">
+
+    <label>Über mich</label>
+    <textarea rows="3" id="about"></textarea>
+
+    <button id="downloadBtn">📄 Steckbrief als PDF herunterladen</button>
+
+    <p class="hint">
+      ✔️ Funktioniert auf Smartphone & Tablet<br>
+      ✔️ Keine Daten werden gespeichert oder versendet
+    </p>
+  </div>
+</div>
+
+
+<script>
+// === JavaScript Code ===
+const photoArea = document.getElementById("photoArea");
+const photoInput = document.getElementById("photoInput");
+const downloadBtn = document.getElementById("downloadBtn");
+let photoData = null;
+let photoWidth = 0;
+let photoHeight = 0;
+
+
+// === Photo Upload and Processing ===
+
+// Handle both click and touch events for photo upload
+photoArea.addEventListener("click", () => {
+  photoInput.click();
+});
+
+photoArea.addEventListener("touchend", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  photoInput.click();
+});
+
+photoInput.addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    // Resize only if image is extremely large (to prevent crashes)
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 2400;  // High quality limit
+      const MAX_HEIGHT = 1800;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+      } else {
+        if (height > MAX_HEIGHT) {
+          width *= MAX_HEIGHT / height;
+          height = MAX_HEIGHT;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Store dimensions for PDF
+      photoWidth = width;
+      photoHeight = height;
+      
+      photoData = canvas.toDataURL('image/jpeg', 0.95);  // High quality (95%)
+      photoArea.innerHTML = `<img src="${photoData}">`;
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+
+// === PDF Generation and Download ===
+
+async function downloadPDF() {
+  try {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF();
+
+    let y = 20;
+
+    pdf.setFontSize(18);
+    pdf.text("Mein Steckbrief", 105, y, { align: "center" });
+    y += 10;
+
+    if (photoData) {
+      // Maintain aspect ratio in PDF
+      const maxWidth = 90;
+      const maxHeight = 90;
+      const aspectRatio = photoWidth / photoHeight;
+      
+      let pdfWidth, pdfHeight;
+      if (aspectRatio > 1) {
+        // Landscape
+        pdfWidth = maxWidth;
+        pdfHeight = maxWidth / aspectRatio;
+      } else {
+        // Portrait or square
+        pdfHeight = maxHeight;
+        pdfWidth = maxHeight * aspectRatio;
+      }
+      
+      // Center the image horizontally
+      const xPos = (210 - pdfWidth) / 2; // A4 width is 210mm
+      
+      pdf.addImage(photoData, "JPEG", xPos, y, pdfWidth, pdfHeight);
+      y += pdfHeight + 10;
+    }
+
+    pdf.setFontSize(12);
+    pdf.text(`Name: ${document.getElementById("name").value}`, 20, y); y += 8;
+    pdf.text(`Klasse: ${document.getElementById("class").value}`, 20, y); y += 8;
+    pdf.text(`Lieblingsfächer: ${document.getElementById("subjects").value}`, 20, y); y += 8;
+    pdf.text(`Hobbys: ${document.getElementById("hobbies").value}`, 20, y); y += 8;
+    pdf.text(`Berufswunsch: ${document.getElementById("job").value}`, 20, y); y += 8;
+
+    const about = document.getElementById("about").value || "";
+    const lines = pdf.splitTextToSize("Über mich: " + about, 170);
+    pdf.text(lines, 20, y);
+
+    // Mobile-friendly download
+    const pdfBlob = pdf.output('blob');
+    const url = URL.createObjectURL(pdfBlob);
+    
+    // More comprehensive mobile detection
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || 
+                     (window.innerWidth <= 768 && 'ontouchstart' in window);
+    
+    // For iOS and Android compatibility
+    if (isMobile) {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'mein_steckbrief.pdf';
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } else {
+      pdf.save("mein_steckbrief.pdf");
+      URL.revokeObjectURL(url);
+    }
+  } catch (error) {
+    alert('Fehler beim Erstellen der PDF: ' + error.message);
+  }
+}
+
+// Handle both click and touch events for download button
+downloadBtn.addEventListener("click", () => {
+  downloadPDF();
+});
+
+downloadBtn.addEventListener("touchend", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  downloadPDF();
+});
+</script>
+
+</body>
+</html>
